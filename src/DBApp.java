@@ -8,6 +8,9 @@ public class DBApp {
     static String pwd;
     static boolean loginSuccess;
     static int attempts;
+    // Alexis Postgres Info
+    static String user = "postgres"
+    static String password = "postgres";
     
     public static void main(String[] args){
     	
@@ -47,6 +50,7 @@ public class DBApp {
             
             if attempts >= 3 {
             	System.out.println("Too many unsuccessfule attemps. Try again later.");
+            	break;
             }
             else {
             	signIn();
@@ -63,13 +67,12 @@ public class DBApp {
     
     
     public static boolean validate(String loginName, String password){
-        try(
-            Connection conn = DriverManager.getConnection(
-            "" //leave blank for now
-            )
+        try( 
+            Connection conn = DriverManager.getConnection("jdbc:postgressql://localhost:5432/postgres", this.user, this.password);
+       
             Statement stmt = conn.createStatement();
         ){
-            String strSelect = "select userName, pwd, userType from user";
+            String strSelect = "select userName, pwd, userType from userTable";
             System.out.println("The SQL statement is: " + strSelect + "\n" ); // Echo for debugging
             
             ResultSet rset = stmt.executeQuery(strSelect);
@@ -107,9 +110,9 @@ public class DBApp {
 	 		 System.out.println("MENU" + 
 	 				 		"\n" + "1: Add record" + 
 	 				 		"\n" + "2: Update record" + 
-	 				 		"\n" + "3: Delete record" + 
+	 				 		"\n" + "3: Remove employee" + 
 	 				 		"\n" + "4: Run report" + 
-	 				 		"\n" + "5: Exit");
+	 				 		"\n" + "5: Logout");
 	 		 
 	 		 temp = input.nextInt();
 	 		 if(temp == 1) // Add record
@@ -122,7 +125,7 @@ public class DBApp {
 	 		 }
 	 		 else if(temp == 3) // Delete record
 	 		 {
-	 			 deleteRecord();
+	 			 deleteEmployee();
 	 		 }
 	 		 else if(temp == 4) // Run report
 	 		 {
@@ -130,7 +133,7 @@ public class DBApp {
 	 		 }
 	 		 else if(temp == 5) // Exit
 	 		 {
-	 			 exit();
+	 			 logout();
 	 		 }
 	 		 else
 	 		 {
@@ -142,7 +145,7 @@ public class DBApp {
 	 		 System.out.println("MENU" + 
 	 				 		"\n" + "1: Update information" + 
 	 				 		"\n" + "2: View information" + 
-	 				 		"\n" + "3. Exit");
+	 				 		"\n" + "3. Logout");
 	 		 
 	 		temp = input.nextInt();
 			 if(temp == 1) // Update Information
@@ -209,10 +212,11 @@ public class DBApp {
     	
     }
     
+    // 3 Folding Points to this function ( not sure why )
     public static void addEmployee() {
     	
-    	int employeeID, bonus, federalTaxBracket, ssn;
-    	String firstName, lastName, jobTitle, salaryType, stateName;
+    	int bonus, federalTaxBracket, ssn;
+    	String employeeID, firstName, lastName, jobTitle, salaryType, stateName;
     	
     	// Instantiate Scanner
     	Scanner scan = new Scanner(System.in);
@@ -221,7 +225,7 @@ public class DBApp {
 		 
 		// Employee ID
 		System.out.println(“Employee ID: ”);
-		employeeID = scan.nextInt();
+		employeeID = scan.next();
 		
 		// Employee Name
 		System.out.println(“Employee First Name: ”);
@@ -253,9 +257,33 @@ public class DBApp {
 		System.out.println(“Employee SSN (No dashes): ”);
 		ssn = scan.nextInt();
 		
+		// SQL CODE
+		try {
+			
+			String update = "insert into Employee" + "\n" +
+							"values(" + employeeID + "," + firstName + "," + lastName + "," +
+							jobTitle + "," + salaryType + "," + bonus + "," federalTaxBracket +
+							stateName + "," + ssn + ");";
+			
+			// Create connection
+			Connection conn = DriverManager.getConnection("jdbc:postgressql://localhost:5432/postgres", this.user, this.password);
+			
+			// Create statement
+			Statement stmt = conn.createStatement();
+			
+			// Execute statement
+			stmt.executeUpdate(update);
+			
+			// Close connections
+			stmt.close();
+			conn.close();
+		}
+		catch(SQLException sqle) {
+			// Handle exceptions
+			System.out.println("SQLException: " + sqle);
+		}
 		
-		
-		// ADD SQL CODE HERE
+		System.out.println("Employee added successfully");
 		
 		
 		scan.close();
@@ -264,18 +292,287 @@ public class DBApp {
     
     public static void addInsurancePlan() {
     	
+    	int indEmpCont, indCompCont, famEmpCont, famCompCont;
+    	String planID, employeeID;
+    	
+    	// Instantiate Scanner
+    	Scanner scan = new Scanner(System.in);
+    	
+		System.out.println(“Please provide the following information:”);
+		 
+		// Employee ID
+		System.out.println(“Employee ID: ”);
+		employeeID = scan.next();
+		
+		// Plan ID
+		System.out.println(“Plan ID: ”);
+		planID = scan.next();
+		
+		// Individual Employee Contribution
+		System.out.println(“Individual Employee Contribution: ”);
+		indEmpCont = scan.nextInt();
+		
+		// Individual Company Contribution
+		System.out.println(“Individual Company Contribution: ”);
+		indCompCont = scan.nextInt();
+		
+		// Family Employee Contribution
+		System.out.println(“Family Employee Contribution: ”);
+		famEmpCont = scan.nextInt();
+		
+		// Family Company Contribution
+		System.out.println(“Family Company Contribution: ”);
+		famCompCont = scan.nextInt();
+		
+		
+		// SQL CODE
+		try {
+			
+			String update = "insert into InsurancePlan" + "\n" +
+							"values(" + planID + "," + indEmpCont + "," + indCompCont + "," +
+							famEmpCont + "," + famCompCont + "," + employeeID + ");";
+			
+			// Create connection
+			Connection conn = DriverManager.getConnection("jdbc:postgressql://localhost:5432/postgres", this.user, this.password);
+			
+			// Create statement
+			Statement stmt = conn.createStatement();
+			
+			// Execute statement
+			stmt.executeUpdate(update);
+			
+			// Close connections
+			stmt.close();
+			conn.close();
+		}
+		catch(SQLException sqle) {
+			// Handle exceptions
+			System.out.println("SQLException: " + sqle);
+		}
+		
+		System.out.println("Insurance Plan added successfully");
+		
+		
+		scan.close();
+		
     }
     
     public static void addBenefits() {
+    	
+    	int f1kEmpCont, f1kCompCont;
+    	String planAccNum, healthPlan, attorneyPlan, lifeIns, employeeID;
+    	
+    	// Instantiate Scanner
+    	Scanner scan = new Scanner(System.in);
+    	
+		System.out.println(“Please provide the following information:”);
+		
+		// 401k Employee Contribution
+		System.out.println(“401k Employee Contribution: ”);
+		f1kEmpCont = scan.nextInt();
+		
+		// 401k Company Contribution
+		System.out.println(“401k Company Contribution: ”);
+		f1kCompCont = scan.nextInt();
+		
+		// Plan Account Number
+		System.out.println(“Plan Account Number: ”);
+		planAccNum = scan.next();
+		
+		// Health Plan
+		System.out.println(“Health Plan: ”);
+		healthPlan = scan.next();
+		
+		// Attorney Plan
+		System.out.println(“Attorney Plan: ”);
+		attorneyPlan = scan.next();
+		
+		// Life Insurance
+		System.out.println(“Life Insurance: ”);
+		lifeIns = scan.next();
+		
+		// Employee ID
+		System.out.println(“Employee ID: ”);
+		employeeID = scan.next();
+		
+		
+		// SQL CODE
+		try {
+			
+			String update = "insert into Benefits" + "\n" +
+							"values(" + f1kEmpCont + "," + f1kCompCont + "," + planAccNum + "," +
+							healthPlan + "," + attorneyPlan + "," + lifeIns + "," + employeeID + ");";
+			
+			// Create connection
+			Connection conn = DriverManager.getConnection("jdbc:postgressql://localhost:5432/postgres", this.user, this.password);
+			
+			// Create statement
+			Statement stmt = conn.createStatement();
+			
+			// Execute statement
+			stmt.executeUpdate(update);
+			
+			// Close connections
+			stmt.close();
+			conn.close();
+		}
+		catch(SQLException sqle) {
+			// Handle exceptions
+			System.out.println("SQLException: " + sqle);
+		}
+		
+		System.out.println("Benefit Plan added successfully");
+		
+		
+		scan.close();
     	
     }
     
     public static void addPaycheck() {
     	
+    	int income, stateTax, fedTax, socialSecurity, medicare, f1kDeduction, insPremium;
+    	String employeeID, paycheckID;
+    	
+    	
+    	// Instantiate Scanner
+    	Scanner scan = new Scanner(System.in);
+    	
+		System.out.println(“Please provide the following information:”);
+		
+		// Employee ID
+		System.out.println(“Employee ID: ”);
+		employeeID = scan.next();
+		
+		// Paycheck ID
+		System.out.println(“Paycheck ID: ”);
+		paycheckID = scan.next();
+		
+		//THE REST CAN BE OBTAINED THROUGH SELECT STATEMENTS
+		// TO BE ADDED LATER
+		
+		// Income
+		System.out.println(“Gross Pay: ”);
+		income = scan.nextInt();
+		
+		// stateTax
+		// 1. Get Employee stateName
+		// 2. Get stateTaxRate from States using stateName
+		// 3. Multiply state tax rate * income
+		
+		// fedTax
+		// 1. Get Employee fedTaxBracket
+		// 2. Get fedTaxRate from federalTax using fedTaxBracket
+		// 3. Multiply federal tax rate * income
+		
+		// Social Security & medicare
+		// 1. Get Employee employeeSSN
+		// 2. Get ssEmpPortion from otherTaxes using employeeSSN
+		// 3. Get medicare from otherTaxes using employeeSSN
+		
+		// 401K Deduction
+		// 1. Use employeeID
+		// 2. Get fourOneKEmployeeContr from Benefits using employeeID
+		
+		// Insurance Premium
+		// 1. Use employeeID
+		// 2. Get individualEmployeeContr from Benefits using employeeID
+		// 3. Get familyEmployeeContr from Benefits using employeeID
+		// 4. Add individualEmployeeContr + familyEmployeeContr
+		
+		
+		// SQL CODE
+		try {
+			
+			String update = "insert into Paycheck" + "\n" +
+							"values(" + employeeID + "," + paycheckID + "," + income + "," + stateTax + "," +
+							fedTax + "," + socialSecurity + "," + medicare + "," + f1kDeduction + "," + insPremium + ");";
+			
+			// Create connection
+			Connection conn = DriverManager.getConnection("jdbc:postgressql://localhost:5432/postgres", this.user, this.password);
+			
+			// Create statement
+			Statement stmt = conn.createStatement();
+			
+			// Execute statement
+			stmt.executeUpdate(update);
+			
+			// Close connections
+			stmt.close();
+			conn.close();
+		}
+		catch(SQLException sqle) {
+			// Handle exceptions
+			System.out.println("SQLException: " + sqle);
+		}
+		
+		System.out.println("Paycheck added successfully");
+		
+		
+		scan.close();
     }
     
     public static void addW2() {
+    	int income, deductions, bonuses;
+    	String employeeID, w2ID;
     	
+    	
+    	// Instantiate Scanner
+    	Scanner scan = new Scanner(System.in);
+    	
+		System.out.println(“Please provide the following information:”);
+		
+		// Employee ID
+		System.out.println(“Employee ID: ”);
+		employeeID = scan.next();
+		
+		// W2 ID
+		System.out.println(“W2 ID: ”);
+		w2ID = scan.next();
+		
+		// Yearly Income
+		System.out.println(“Gross Pay: ”);
+		income = scan.nextInt();
+		
+		// Deductions
+		System.out.println(“Deductions: ”);
+		deductions = scan.nextInt();
+		
+		// Bonuses
+		System.out.println(“Bonuses: ”);
+		bonuses = scan.nextInt();
+		
+
+		
+		
+		// SQL CODE
+		try {
+			
+			String update = "insert into W2" + "\n" +
+							"values(" + employeeID + "," + w2ID + "," + income + "," +
+							deductions + "," + bonuses + ");";
+			
+			// Create connection
+			Connection conn = DriverManager.getConnection("jdbc:postgressql://localhost:5432/postgres", this.user, this.password);
+			
+			// Create statement
+			Statement stmt = conn.createStatement();
+			
+			// Execute statement
+			stmt.executeUpdate(update);
+			
+			// Close connections
+			stmt.close();
+			conn.close();
+		}
+		catch(SQLException sqle) {
+			// Handle exceptions
+			System.out.println("SQLException: " + sqle);
+		}
+		
+		System.out.println("W2 added successfully");
+		
+		
+		scan.close();
     }
     
     
@@ -378,15 +675,37 @@ public class DBApp {
     }
     
     
-    public static void deleteRecord() {
-		// Instantiate Scanner
-		Scanner scan = new Scanner(System.in);
+    public static void deleteEmployee() {
+    	
+    	String employeeID;
+    	char answer;
+    	
+    	// Instantiate Scanner
+    	Scanner scan = new Scanner(System.in);
+    	
+		System.out.println(“Please provide the Employee ID:”);
+		
+		// Employee ID
+		System.out.println(“Employee ID: ”);
+		employeeID = scan.next();
 		 
+		System.out.println(“This operation is permanent and cannot be undone. Continue? (Y/N)”);
+		answer = scan.next();
+		
+		if (answer == "Y") {
+			
+			// INSERT SQL CODE HERE
+			
+			
+		}
+		else {
+			System.out.println(“Exiting operation...”);
+		}
 		
 		
-		scan.close()
-		
-    	presentMenu(this.userType);
+		scan.close();
+		 
+		presentMenu(this.userType);
     }
     
     
@@ -403,5 +722,12 @@ public class DBApp {
     	presentMenu(this.userType);
     }
     
+    public static void logout() {
+    	
+	   	 this.userName = null;
+	  	 this.String = null;
+	  	 this.userType = null;
+    	
+    }
     
 }
