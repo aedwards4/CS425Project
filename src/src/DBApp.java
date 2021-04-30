@@ -1,5 +1,6 @@
 import java.util.*;
 import java.util.Random;
+
 import java.sql.*;
 
 public class DBApp {
@@ -7,8 +8,10 @@ public class DBApp {
     public static String userType;
     public static String userName;
     public static String pwd;
+    public static Scanner scan;
     static boolean loginSuccess;
     static int attempts;
+    static boolean success;
     
     // Alexis Postgres Info
     public static String user = "postgres";
@@ -23,6 +26,8 @@ public class DBApp {
       	 userType = null;
       	 loginSuccess = false;
       	 attempts = 0;
+      	 scan = new Scanner(System.in);
+      	 success = false;
       	 
       	 // Sign in the user
       	 signin();
@@ -33,23 +38,25 @@ public class DBApp {
           	 presentMenu(userType);
           	 
       	 }
+      	 
+      	 scan.close();
 
     }
     
     
     public static void signin(){
-        Scanner input = new Scanner(System.in);
         
         //user log in with password and userName
         System.out.println("------Log In------");
         System.out.println("User name:");
-        String userName = input.next();
+        String userName = scan.next();
         System.out.println("Password:");
-        String password = input.next();
+        String password = scan.next();
         
         //validate the log in credentials
         while (!validate(userName, password)){
             System.out.println("Invalid username/password!");
+            System.out.println();
             attempts += 1;
             
             if (attempts >= 3) {
@@ -64,22 +71,27 @@ public class DBApp {
         System.out.println("Logged in successfully!");
         loginSuccess = true;
         attempts = 0;
-        
-        input.close();
-        
     }
     
     
     public static boolean validate(String loginName, String password){
-        try(
+        try {
         		
-        	//Class.forName ("org.postgresql.Driver");
+        	try {
+				Class.forName ("org.postgresql.Driver");
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+
             Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", user, sqlPwd);
        
             Statement stmt = conn.createStatement();
-        ){
-            String strSelect = "select userName, pwd, userType from userTable";
-            System.out.println("The SQL statement is: " + strSelect + "\n" ); // Echo for debugging
+        
+            String strSelect = "select *" + "\n" + 
+            					"from userTable" + "\n" +
+            					"where userName = '" + loginName + "';";
+            //System.out.println("The SQL statement is: " + strSelect + "\n" ); // Echo for debugging
             
             ResultSet rset = stmt.executeQuery(strSelect);
             
@@ -87,9 +99,10 @@ public class DBApp {
                 String username = rset.getString("userName");
                 String pword = rset.getString("pwd");
                 String usertype = rset.getString("userType"); //store static var userType
+
                 
-                if(loginName == username){
-                    if(pword == password){
+                if(loginName.equals(username)){
+                    if(pword.equals(password)){
                     	userName = username;
                     	pwd = password;
                     	userType = usertype;
@@ -112,7 +125,7 @@ public class DBApp {
 		try {
 
 			// Create connection
-			Connection conn = DriverManager.getConnection("jdbc:postgressql://localhost:5432/postgres", user, sqlPwd);
+			Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", user, sqlPwd);
 			
 			// Create statement
 			Statement stmt = conn.createStatement();
@@ -135,31 +148,36 @@ public class DBApp {
     }
     
     
-    public static boolean querySQL(String query) {
-		try {
-
-			// Create connection
-			Connection conn = DriverManager.getConnection("jdbc:postgressql://localhost:5432/postgres", user, sqlPwd);
-			
-			// Create statement
-			Statement stmt = conn.createStatement();
-			
-			// Execute statement
-			rset = stmt.executeQuery(query);
-			
-			// Close connections
-			stmt.close();
-			conn.close();
-			
-			return true;
-		}
-		catch(SQLException sqle) {
-			// Handle exceptions
-			System.out.println("SQLException: " + sqle);
-			
-			return false;
-		}
-    }
+//    public static ResultSet querySQL(String query) {
+//		try {
+//
+//			// Create connection
+//			Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", user, sqlPwd);
+//			
+//			// Create statement
+//			Statement stmt = conn.createStatement();
+//			
+//			// Execute statement
+//			rset = stmt.executeQuery(query);
+//			
+//			while(rset.next()) {
+//				variable = rset.getString("insurancePremium");
+//			}
+//			
+//			// Close connections
+//			stmt.close();
+//			conn.close();
+//			
+//			success = true;
+//		
+//		}
+//		catch(SQLException sqle) {
+//			// Handle exceptions
+//			System.out.println("SQLException: " + sqle);
+//		}
+//		return rset;
+//    }
+//    
     
     public static String stringQuery(String select, String from, String where, String equals) {
     	
@@ -167,28 +185,39 @@ public class DBApp {
     	
     	String query = "SELECT " + select + "\n" +
 				"FROM " + from + "\n" +
-				"WHERE " + where + " = " + equals + ");";
-		boolean success = querySQL(query);
+				"WHERE " + where + " = '" + equals + "';";
+    	
+    	try {
+
+			// Create connection
+			Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", user, sqlPwd);
+			
+			// Create statement
+			Statement stmt = conn.createStatement();
+			
+			// Execute statement
+			rset = stmt.executeQuery(query);
+			
+			while(rset.next()) {
+				variable = rset.getString(select);
+			}
+			
+			// Close connections
+			stmt.close();
+			conn.close();
+			
+			success = true;
 		
-		if (success) {
-			
-			// Reset success variable
-			success = false;
-			
-			try {
-				while(rset.next()) {
-					variable = rset.getString("insurancePremium");
-				}
-			}
-			catch(SQLException sqle) {
-				// Handle exceptions
-				System.out.println("SQLException: " + sqle);
-			}
+		}
+		catch(SQLException sqle) {
+			// Handle exceptions
+			System.out.println("SQLException: " + sqle);
 		}
 		
 		return variable;
 		
     }
+    
     
     public static double doubleQuery(String select, String from, String where, String equals) {
     	
@@ -196,36 +225,86 @@ public class DBApp {
     	
     	String query = "SELECT " + select + "\n" +
 				"FROM " + from + "\n" +
-				"WHERE " + where + " = " + equals + ");";
-		boolean success = querySQL(query);
+				"WHERE " + where + " = '" + equals + "';";
+    	
+    	try {
+
+			// Create connection
+			Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", user, sqlPwd);
+			
+			// Create statement
+			Statement stmt = conn.createStatement();
+			
+			// Execute statement
+			rset = stmt.executeQuery(query);
+			
+			while(rset.next()) {
+				variable = rset.getDouble(select);
+			}
+			
+			// Close connections
+			stmt.close();
+			conn.close();
+			
+			success = true;
 		
-		if (success) {
-			
-			// Reset success variable
-			success = false;
-			
-			try {
-				while(rset.next()) {
-					variable = rset.getDouble("insurancePremium");
-				}
-			}
-			catch(SQLException sqle) {
-				// Handle exceptions
-				System.out.println("SQLException: " + sqle);
-			}
+		}
+		catch(SQLException sqle) {
+			// Handle exceptions
+			System.out.println("SQLException: " + sqle);
 		}
 		
 		return variable;
-		
     }
     
+    public static double aggQuery(String select, String from, String where, String equals, String groupBy) {
+    	
+    	double variable=0;
+    	boolean success=false;
+    	
+    	String [] selSplit = select.split(",");
+    	
+    	String query = "SELECT " + selSplit[0] + ", sum" + "\n" +
+    					" FROM (select " + select + " from " + from + " group by " + groupBy + ") as temp" + "\n" +
+						"WHERE " + where + " = '" + equals + "';";
+    	
+    	try {
+
+			// Create connection
+			Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", user, sqlPwd);
+			
+			// Create statement
+			Statement stmt = conn.createStatement();
+			
+			// Execute statement
+			rset = stmt.executeQuery(query);
+			
+			while(rset.next()) {
+				variable = rset.getDouble("sum");
+			}
+			
+			// Close connections
+			stmt.close();
+			conn.close();
+			success = true;
+		}
+		catch(SQLException sqle) {
+			success = false;
+			// Handle exceptions
+			System.out.println("SQLException: " + sqle);
+		}
+    	
+		return variable;
+    }
     
     public static void presentMenu(String userType) {
+    		
+    	 System.out.println();
     	
     	 int temp = 0;
-    	 Scanner scan = new Scanner(System.in);
+    	 //Scanner scan = new Scanner(System.in);
 
-	 	 if(userType == "Admin")
+	 	 if(userType.equals("Admin"))
 	 	 {
 	 		 System.out.println("MENU" + 
 	 				 		"\n" + "1: Add record" + 
@@ -233,8 +312,10 @@ public class DBApp {
 	 				 		"\n" + "3: Remove employee" + 
 	 				 		"\n" + "4: Run report" + 
 	 				 		"\n" + "5: Logout");
-	 		 
+	 
+	 		 //System.out.println("Here!");
 	 		 temp = scan.nextInt();
+	 		 
 	 		 if(temp == 1) // Add record
 	 		 {
 	 			 addRecord();
@@ -260,7 +341,7 @@ public class DBApp {
 	 			System.out.println("Invalid command, please try again");
 	 		 }
 	 	 }
-	 	else if (userType == "Manager")//menu for manager
+	 	else if (userType.equals("Manager"))//menu for manager
 	 	 {
 	 		 System.out.println("MENU" + 
 	 				 		"\n" + "1: Update information" + 
@@ -274,7 +355,7 @@ public class DBApp {
 			 }
 			 else if(temp == 2) // View Information
 			 {
-				 viewInfo();
+				 //viewInfo();
 			 }
 			else if(temp == 3) // Exit
 			 {
@@ -288,18 +369,19 @@ public class DBApp {
 			 
 			 System.out.println("MENU" +
 								"\n" + "1. View Information" +
-								"\n" + "2. Logout");
+								"\n" + "2. Add Benefits Plan" +
+								"\n" + "3. Logout");
 			temp = scan.nextInt();
 			if (temp == 1){
-				viewInfo();
+				viewInfo(userName);
 			}else if(temp == 2){
+				addBenefits(userName);
+			}else if(temp == 3){
 				logout();
 			}else{
 				System.out.println("Invalid command, please try again");
 			}
 		 }
-	 	 
-	 	 scan.close();
     	
     }
     
@@ -307,15 +389,14 @@ public class DBApp {
     public static void addRecord() {
     	
     	 // Instantiate Scanner
-		 Scanner scan = new Scanner(System.in);
+		 //Scanner scan = new Scanner(System.in);
 		 
 		 // Print out options
 		 System.out.println("What kind of record would you like to add?" +
 				 				"\n" + "1. Employee" +								// Employee
 				 				"\n" + "2. Insurance Plan" +						// InsurancePlan
-				 				"\n" + "3. Benefits" +								// Benefits
-				 				"\n" + "4. Paycheck" +								// Paycheck
-				 				"\n" + "5. W2");									// w2
+				 				"\n" + "3. Paycheck" +								// Paycheck
+				 				"\n" + "4. W2");									// w2
 				 				
 		 int selection = scan.nextInt();
 		 if (selection == 1) {				// Employee
@@ -324,21 +405,16 @@ public class DBApp {
 		 else if (selection == 2) {			// InsurancePlan
 			 addInsurancePlan();
 		 }
-		 else if (selection == 3) {			// Benefits
-			 addBenefits();
-		 }
-		 else if (selection == 4) {			// Paycheck
+		 else if (selection == 3) {			// Paycheck
 			addPaycheck();
 		 }
-		 else if (selection == 5) {			// w2
+		 else if (selection == 4) {			// w2
 			addW2();
 		 }
 		 else {
 			System.out.println("Invalid command, please try again");
 		 }
-		 
-		 scan.close();
-		 
+
 		 presentMenu(userType);
     	
     }
@@ -347,11 +423,12 @@ public class DBApp {
     // 3 Folding Points to this function ( not sure why )
     public static void addEmployee() {
     	
-    	int bonus, federalTaxBracket, ssn;
+    	int federalTaxBracket, ssn;
     	String employeeID, firstName, lastName, jobTitle, salaryType, stateName;
+    	double bonus;
     	
     	// Instantiate Scanner
-    	Scanner scan = new Scanner(System.in);
+    	//Scanner scan = new Scanner(System.in);
     	
 		System.out.println("Please provide the following information:");
 		 
@@ -367,15 +444,15 @@ public class DBApp {
 		
 		// Job Title
 		System.out.println("Job Title: ");
-		jobTitle = scan.next();
+		jobTitle = scan.nextLine();
+		
+		String x = scan.nextLine();
 		
 		// Salary Type
 		System.out.println("Salary Type (W2/Hourly): ");
 		salaryType = scan.next();
 		
-		// Bonus
-		System.out.println("Yearly Bonus: ");
-		bonus = scan.nextInt();
+		x = scan.nextLine();
 		
 		// Federal Tax Bracket
 		System.out.println("Federal Tax Bracket (1/2/3): ");
@@ -389,31 +466,58 @@ public class DBApp {
 		System.out.println("Employee SSN (No dashes): ");
 		ssn = scan.nextInt();
 		
-		// SQL CODE
-		
-		String update = "insert into Employee" + "\n" +
-				"values(" + employeeID + "," + firstName + "," + lastName + "," +
-				jobTitle + "," + salaryType + "," + bonus + "," + federalTaxBracket +
-				stateName + "," + ssn + ");";
-		
-		boolean result = updateSQL(update);
-		
-		if (result) {
-			System.out.println("Employee added successfully");
+		String otherTax="";
+		if (salaryType.equals("W2")) {
+			
+			System.out.println("Yearly Bonus Percentage (as decimal): ");
+			bonus = scan.nextDouble();
+			
+			x = scan.nextLine();
+			
+			otherTax = "insert into otherTaxes" + "\n" +
+							"values('" + ssn + "'," + 0.075 + "," + 0.075 + "," + 0.025 + ");";
+
+		} else {
+			
+			bonus = 0.0;
+			
+			otherTax = "insert into otherTaxes" + "\n" +
+					"values('" + ssn + "'," + 0.15 + "," + 0.00 + "," + 0.025 + ");";
 		}
 		
-		scan.close();
+		boolean result = updateSQL(otherTax);
+		if (result) {
+			result = false;
+			
+			String update = "insert into Employee" + "\n" +
+					"values('" + employeeID + "','" + firstName + "','" + lastName + "','" +
+					jobTitle + "','" + salaryType + "'," + bonus + "," + federalTaxBracket + ",'" +
+					stateName + "'," + ssn + ");";
+			
+			result = updateSQL(update);
+			
+			if (result) {
+				result = false;
+				
+				update = "insert into userTable" + "\n" +
+						"values('" + employeeID + "','" + "pwd" + "','" + "Emp" + "');";
+				
+				result = updateSQL(update);
+				if (result) {
+					System.out.println("Employee added successfully");
+				}
+				
+			}
+			
+		}
 		
     }
     
     
     public static void addInsurancePlan() {
     	
-    	int indEmpCont, indCompCont, famEmpCont, famCompCont;
+    	double indEmpCont, indCompCont, famEmpCont, famCompCont;
     	String planID, employeeID;
-    	
-    	// Instantiate Scanner
-    	Scanner scan = new Scanner(System.in);
     	
 		System.out.println("Please provide the following information:");
 		 
@@ -422,73 +526,74 @@ public class DBApp {
 		employeeID = scan.next();
 		
 		// Plan ID
-		System.out.println("Plan ID: ");
+		System.out.println("Plan ID (Humana/UnitedHealth/BCBS): ");
 		planID = scan.next();
 		
 		// Individual Employee Contribution
 		System.out.println("Individual Employee Contribution: ");
-		indEmpCont = scan.nextInt();
+		indEmpCont = scan.nextDouble();
 		
 		// Individual Company Contribution
 		System.out.println("Individual Company Contribution: ");
-		indCompCont = scan.nextInt();
+		indCompCont = scan.nextDouble();
 		
 		// Family Employee Contribution
 		System.out.println("Family Employee Contribution: ");
-		famEmpCont = scan.nextInt();
+		famEmpCont = scan.nextDouble();
 		
 		// Family Company Contribution
 		System.out.println("Family Company Contribution: ");
-		famCompCont = scan.nextInt();
+		famCompCont = scan.nextDouble();
 		
 		
 		// SQL CODE
 		String update = "insert into InsurancePlan" + "\n" +
-						"values(" + planID + "," + indEmpCont + "," + indCompCont + "," +
-						famEmpCont + "," + famCompCont + "," + employeeID + ");";
+						"values('" + planID + "'," + indEmpCont + "," + indCompCont + "," +
+						famEmpCont + "," + famCompCont + ",'" + employeeID + "');";
 		
 		boolean result = updateSQL(update);
 		if (result) {
 			System.out.println("Insurance Plan added successfully");
 		}
-		
-		scan.close();
+
 		
     }
     
     
-    public static void addBenefits() {
+    public static void addBenefits(String employeeID) {
     	
-    	int f1kEmpCont, f1kCompCont;
-    	String planAccNum, healthPlan, attorneyPlan, lifeIns, employeeID;
+    	double f1kEmpCont, f1kCompCont;
+    	String planAccNum, healthPlan, attorneyPlan, lifeIns;
     	
     	// Instantiate Scanner
-    	Scanner scan = new Scanner(System.in);
+    	//Scanner scan = new Scanner(System.in);
     	
 		System.out.println("Please provide the following information:");
 		
 		// 401k Employee Contribution
-		System.out.println("401k Employee Contribution: ");
-		f1kEmpCont = scan.nextInt();
+		System.out.println("401K Contribution: ");
+		f1kEmpCont = scan.nextDouble();
 		
-		// 401k Company Contribution
-		System.out.println("401k Company Contribution: ");
-		f1kCompCont = scan.nextInt();
+		if (f1kEmpCont > 0.07) {
+			f1kCompCont = 0.07;
+		} else {
+			f1kCompCont = f1kEmpCont;
+		}
 		
 		// Plan Account Number
-		System.out.println("Plan Account Number: ");
-		planAccNum = scan.next();
+		Random random = new Random();
+		planAccNum = "A" + String.valueOf(random.nextInt(10000));
 		
 		// Health Plan
-		System.out.println("Health Plan: ");
+		System.out.println("Health Plan (Y/N): ");
 		healthPlan = scan.next();
 		
 		// Attorney Plan
-		System.out.println("Attorney Plan: ");
+		System.out.println("Attorney Plan(Y/N): ");
 		attorneyPlan = scan.next();
 		
 		// Life Insurance
-		System.out.println("Life Insurance: ");
+		System.out.println("Life Insurance (Tier1/Tier2/Tier3/None): ");
 		lifeIns = scan.next();
 		
 		// Employee ID
@@ -498,16 +603,15 @@ public class DBApp {
 		
 		// SQL CODE
 		String update = "insert into Benefits" + "\n" +
-						"values(" + f1kEmpCont + "," + f1kCompCont + "," + planAccNum + "," +
-						healthPlan + "," + attorneyPlan + "," + lifeIns + "," + employeeID + ");";
+						"values(" + f1kEmpCont + "," + f1kCompCont + ",'" + planAccNum + "','" +
+						healthPlan + "','" + attorneyPlan + "','" + lifeIns + "','" + employeeID + "');";
 			
 		boolean result = updateSQL(update);
 		
 		if (result) {
 			System.out.println("Benefit Plan added successfully");
 		}
-		
-		scan.close();
+
     	
     }
     
@@ -515,11 +619,7 @@ public class DBApp {
     public static void addPaycheck() {
 
     	String employeeID, paycheckID;
-    	double income, stateTax, fedTax, socialSecurity, medicare, f1kDeduction, insPremium;
-    	
-    	
-    	// Instantiate Scanner
-    	Scanner scan = new Scanner(System.in);
+    	double income, stateTax, fedTax, socialSecurity, medicare, f1kDeduction, insPremium, totalDeductions;
     	
 		System.out.println("Please provide the following information:");
 		
@@ -528,7 +628,7 @@ public class DBApp {
 		employeeID = scan.next();
 		
 		// Paycheck ID
-		System.out.println("Paycheck ID: ");
+		System.out.println("Paycheck Date (Formatted as 01/01/1999: ");
 		paycheckID = scan.next();
 		
 		// Income
@@ -542,81 +642,44 @@ public class DBApp {
 		fedTax = getFedTax(employeeID, income);
 		
 		// Social Security & medicare
-		socialSecurity = getSS(employeeID);
-		medicare = getMedicare(employeeID);
+		socialSecurity = getSS(employeeID) * income;
+		medicare = getMedicare(employeeID) * income;
 		
 		// 401K Deduction
-		f1kDeduction = get401(employeeID);
+		f1kDeduction = get401(employeeID) * income;
 		
 		// Insurance Premium
-		insPremium = getInsPremium(employeeID);
+		insPremium = getInsPremium(employeeID, income);
+		
+		//TotalDeductions
+		totalDeductions = stateTax + fedTax + socialSecurity + medicare;
 		
 		// SQL CODE
 		String update = "insert into Paycheck" + "\n" +
-						"values(" + employeeID + "," + paycheckID + "," + income + "," + stateTax + "," +
-						fedTax + "," + socialSecurity + "," + medicare + "," + f1kDeduction + "," + insPremium + ");";
+						"values('" + employeeID + "','" + paycheckID + "'," + income + "," + stateTax + "," +
+						fedTax + "," + socialSecurity + "," + medicare + "," + f1kDeduction + "," + insPremium + "," + totalDeductions + ");";
 		
 		boolean result = updateSQL(update);
 		
 		if (result) {
-			System.out.println("Paycheck added successfully");
+			System.out.println("Paycheck ID "+ paycheckID + " for Employee " + employeeID + " added successfully");
 		}
-		
-		scan.close();
+
     }
     
     
     public static double getStateTax(String employeeID, double income) {
     	//Initialize variables
 		String stateName = "";
-		String query = "";
 		double stateTaxRate = 0.0;
 		double stateTax = 0;
-    	boolean success;
 		
-		// 1. Get Employee stateName
-		query = "SELECT stateName" + "\n" +
-				"FROM Employee" + "\n" +
-				"WHERE employeeID =" + employeeID + ");";
-		
-		success = querySQL(query);
-		if (success) {
-			
-			// Reset success variable
-			success = false;
-			
-			try {
-				while(rset.next()) {
-					stateName = rset.getString("stateName");
-				}
-			}
-			catch(SQLException sqle) {
-				// Handle exceptions
-				System.out.println("SQLException: " + sqle);
-			}
-			
-			// 2. Get stateTaxRate from States using stateName
-			query = "SELECT stateTaxRate" + "\n" +
-					"FROM States" + "\n" +
-					"WHERE stateName = " + stateName + ");";
-			
-			success = querySQL(query);
-			if (success) {
-				
-				try {
-					while(rset.next()) {
-						stateTaxRate = rset.getDouble("stateTaxRate");
-					}
-				}
-				catch(SQLException sqle) {
-					// Handle exceptions
-					System.out.println("SQLException: " + sqle);
-				}
-				
-				// 3. Multiply state tax rate * income
-				stateTax = stateTaxRate * income;
-			}	
-		}
+    	stateName = stringQuery("stateName", "Employee", "employeeID", employeeID);
+    	stateTaxRate = doubleQuery("stateTaxRate", "States", "stateName", stateName);
+    	
+    	// Multiply state tax rate * income
+		stateTax = stateTaxRate * income;
+
 		return stateTax;
     }
     
@@ -624,242 +687,57 @@ public class DBApp {
     public static double getFedTax(String employeeID, double income) {
     	//Initialize variables
 		String taxBracket = "";
-		String query = "";
 		double fedTaxRate = 0.0;
 		double fedTax = 0;
-    	boolean success;
 		
-    	// 1. Get Employee fedTaxBracket
-		query = "SELECT federalTaxBracket" + "\n" +
-				"FROM Employee" + "\n" +
-				"WHERE employeeID =" + employeeID + ");";
-		
-		success = querySQL(query);
-		if (success) {
-			
-			// Reset success variable
-			success = false;
-			
-			try {
-				while(rset.next()) {
-					taxBracket = rset.getString("federalTaxBracket");
-				}
-			}
-			catch(SQLException sqle) {
-				// Handle exceptions
-				System.out.println("SQLException: " + sqle);
-			}
-			
-			// 2. Get fedTaxRate from federalTax using fedTaxBracket
-			query = "SELECT fedTaxRate" + "\n" +
-					"FROM federalTax" + "\n" +
-					"WHERE federalTaxBracket = " + taxBracket + ");";
-			
-			success = querySQL(query);
-			if (success) {
-				
-				try {
-					while(rset.next()) {
-						fedTaxRate = rset.getDouble("stateTaxRate");
-					}
-				}
-				catch(SQLException sqle) {
-					// Handle exceptions
-					System.out.println("SQLException: " + sqle);
-				}
-				
-				// 3. Multiply federal tax rate * income
-				fedTax = fedTaxRate * income;
-			}	
-		}
+    	taxBracket = stringQuery("federalTaxBracket", "Employee", "employeeID", employeeID);
+    	fedTaxRate = doubleQuery("fedTaxRate", "federalTax", "federalTaxBracket", taxBracket);
+    	fedTax = fedTaxRate * income;
+
 		return fedTax;
     }
     
     
     public static double getSS(String employeeID) {
     	double ss = 0.0;
-    	String query, ssn="";
-    	boolean success = false;
+    	String ssn="";
     	
-    	// 1. Get Employee employeeSSN
-		query = "SELECT employeeSSN" + "\n" +
-				"FROM Employee" + "\n" +
-				"WHERE employeeID =" + employeeID + ");";
-		success = querySQL(query);
-		
-		if (success) {
-			
-			// Reset success variable
-			success = false;
-			
-			try {
-				while(rset.next()) {
-					ssn = rset.getString("employeeSSN");
-				}
-			}
-			catch(SQLException sqle) {
-				// Handle exceptions
-				System.out.println("SQLException: " + sqle);
-			}
-			
-			// 2. Get ssEmpPortion from otherTaxes using employeeSSN
-			query = "SELECT ssEmpPortion" + "\n" +
-					"FROM otherTaxes" + "\n" +
-					"WHERE employeeSSN =" + ssn + ");";
-			success = querySQL(query);
-			
-			if (success) {
-				
-				// Reset success variable
-				success = false;
-				
-				try {
-					while(rset.next()) {
-						ss = rset.getDouble("ssEmpPortion");
-					}
-				}
-				catch(SQLException sqle) {
-					// Handle exceptions
-					System.out.println("SQLException: " + sqle);
-				}
-			}
-		}
+    	ssn = stringQuery("employeeSSN", "Employee", "employeeID", employeeID);
+    	ss = doubleQuery("ssEmpPortion", "otherTaxes", "employeeSSN", ssn);
+    	
     	return ss;
     }
     
     
     public static double getMedicare(String employeeID) {
     	double medicare = 0.0;
-    	String query, ssn = "";
-    	boolean success = false;
+    	String ssn = "";
     	
-    	// 1. Get Employee employeeSSN
-		query = "SELECT employeeSSN" + "\n" +
-				"FROM Employee" + "\n" +
-				"WHERE employeeID =" + employeeID + ");";
-		success = querySQL(query);
-		
-		if (success) {
-			
-			// Reset success variable
-			success = false;
-			
-			try {
-				while(rset.next()) {
-					ssn = rset.getString("employeeSSN");
-				}
-			}
-			catch(SQLException sqle) {
-				// Handle exceptions
-				System.out.println("SQLException: " + sqle);
-			}
-			
-			// 2. Get medicare from otherTaxes using employeeSSN
-			query = "SELECT medicare" + "\n" +
-					"FROM otherTaxes" + "\n" +
-					"WHERE employeeSSN =" + ssn + ");";
-			success = querySQL(query);
-			
-			if (success) {
-				
-				// Reset success variable
-				success = false;
-				
-				try {
-					while(rset.next()) {
-						medicare = rset.getDouble("medicare");
-					}
-				}
-				catch(SQLException sqle) {
-					// Handle exceptions
-					System.out.println("SQLException: " + sqle);
-				}
-			}
-		}
+    	ssn = stringQuery("employeeSSN", "Employee", "employeeID", employeeID);
+    	medicare = doubleQuery("medicare", "otherTaxes", "employeeSSN", ssn);
+    	
     	return medicare;
     }
     
     
     public static double get401(String employeeID) {
     	double f1k = 0.0;
-    	String query;
-    	boolean success = false;
     	
-		// 1. Get fourOneKEmployeeContr from Benefits using employeeID
-		query = "SELECT fourOneKEmployeeContr" + "\n" +
-				"FROM Benefits" + "\n" +
-				"WHERE employeeID =" + employeeID + ");";
-		success = querySQL(query);
-		
-		if (success) {
-			
-			// Reset success variable
-			success = false;
-			
-			try {
-				while(rset.next()) {
-					f1k = rset.getDouble("fourOneKEmployeeContr");
-				}
-			}
-			catch(SQLException sqle) {
-				// Handle exceptions
-				System.out.println("SQLException: " + sqle);
-			}
-		}
+    	f1k = doubleQuery("fourOneKEmployeeContr", "Benefits", "employeeID", employeeID);
+    	
     	return f1k;
     }
     
     
-    public static double getInsPremium(String employeeID) {
+    public static double getInsPremium(String employeeID, double income) {
     	double premium = 0.0, ind = 0.0, fam = 0.0;
-    	String query;
-    	boolean success = false;
     	
-		// 1. Get individualEmployeeContr from InsurancePlan using employeeID
-		query = "SELECT individualEmployeeContr" + "\n" +
-				"FROM InsurancePlan" + "\n" +
-				"WHERE employeeID =" + employeeID + ");";
-		success = querySQL(query);
-		
-		if (success) {
-			
-			// Reset success variable
-			success = false;
-			
-			try {
-				while(rset.next()) {
-					ind = rset.getDouble("individualEmployeeContr");
-				}
-			}
-			catch(SQLException sqle) {
-				// Handle exceptions
-				System.out.println("SQLException: " + sqle);
-			}
-		}
-		
-		// 3. Get familyEmployeeContr from Benefits using employeeID
-		query = "SELECT familyEmployeeContr" + "\n" +
-				"FROM InsurancePlan" + "\n" +
-				"WHERE employeeID =" + employeeID + ");";
-		success = querySQL(query);
-		
-		if (success) {
-			
-			// Reset success variable
-			success = false;
-			
-			try {
-				while(rset.next()) {
-					fam = rset.getDouble("familyEmployeeContr");
-				}
-			}
-			catch(SQLException sqle) {
-				// Handle exceptions
-				System.out.println("SQLException: " + sqle);
-			}
-		}
+    	ind = doubleQuery("individualEmployeeContr", "InsurancePlan", "employeeID", employeeID);
+    	ind = ind * income;
     	
-		// 4. Add individualEmployeeContr + familyEmployeeContr
+    	fam = doubleQuery("familyEmployeeContr", "InsurancePlan", "employeeID", employeeID);
+    	fam = fam * income;
+
     	premium = ind + fam;
     	
         return premium;
@@ -867,12 +745,8 @@ public class DBApp {
     
     
     public static void addW2() {
-    	int income, deductions, bonuses;
+    	double income, deductions, bonuses, bonusPct;
     	String employeeID, w2ID;
-    	
-    	
-    	// Instantiate Scanner
-    	Scanner scan = new Scanner(System.in);
     	
 		System.out.println("Please provide the following information:");
 		
@@ -881,20 +755,18 @@ public class DBApp {
 		employeeID = scan.next();
 		
 		// W2 ID
-		System.out.println("W2 ID: ");
+		System.out.println("W2 Year: ");
 		w2ID = scan.next();
 		
 		// Yearly Income
-		System.out.println("Gross Pay: ");
-		income = scan.nextInt();
-		
+		income = aggQuery("employeeID, sum(income)", "Paycheck", "employeeID", employeeID, "employeeID");
+	
 		// Deductions
-		System.out.println("Deductions: ");
-		deductions = scan.nextInt();
+		deductions = aggQuery("employeeID, sum(totalDeductions)", "Paycheck", "employeeID", employeeID, "employeeID");
 		
 		// Bonuses
-		System.out.println("Bonuses: ");
-		bonuses = scan.nextInt();
+		bonusPct = doubleQuery("bonus", "Employee", "employeeID", employeeID);
+		bonuses = bonusPct*income;
 		
 		// SQL CODE
 		String update = "insert into W2" + "\n" +
@@ -907,14 +779,10 @@ public class DBApp {
 			System.out.println("W2 added successfully");
 		}
 
-		scan.close();
     }
     
     
     public static void updateRecord() {
-    	
-		 // Instantiate Scanner
-		 Scanner scan = new Scanner(System.in);
 		 
 		 // Print out options
 		 System.out.println("What kind of record would you like to update?" +
@@ -954,17 +822,16 @@ public class DBApp {
 			updateRecord();
 		 }
 		 
-		 scan.close();
-		 
 		 presentMenu(userType);
     }
     
     
     public static void updateEmployee() {
-    	 String update = "";
+    	 String update = "", set="";
+    	 
     	
 		 // Instantiate Scanner
-		 Scanner scan = new Scanner(System.in);
+		 //Scanner scan = new Scanner(System.in);
 		 
 		 System.out.println("Please enter the Employee's ID: ");
 		 String employeeID = scan.next();
@@ -982,16 +849,16 @@ public class DBApp {
 			 String jobTitle = scan.next();
 			 
 			 update = "UPDATE Employee" + "\n" +
-					 	"SET jobTitle = " + jobTitle + "\n" +
-					 	"WHERE employeeID = " + employeeID + ");";
+					 	"SET jobTitle = '" + jobTitle + "'\n" +
+					 	"WHERE employeeID = '" + employeeID + "';";
 		 }
 		 else if (selection == 2) {			// salaryType
 			 System.out.println("W2 or Hourly?: ");
 			 String salaryType = scan.next();
 			 
 			 update = "UPDATE Employee" + "\n" +
-					 	"SET salaryType = " + salaryType + "\n" +
-					 	"WHERE employeeID = " + employeeID + ");";
+					 	"SET salaryType = '" + salaryType + "'\n" +
+					 	"WHERE employeeID = '" + employeeID + "';";
 		 }
 		 else if (selection == 3) {			// bonus
 			 System.out.println("Enter Bonus Amount: $");
@@ -999,15 +866,15 @@ public class DBApp {
 			 
 			 update = "UPDATE Employee" + "\n" +
 					 	"SET bonus = " + bonus + "\n" +
-					 	"WHERE employeeID = " + employeeID + ");";
+					 	"WHERE employeeID = '" + employeeID + "';";
 		 }
 		 else if (selection == 4) {			// stateName
 			 System.out.println("State Name: ");
 			 String stateName = scan.next();
 			 
 			 update = "UPDATE Employee" + "\n" +
-					 	"SET stateName = " + stateName + "\n" +
-					 	"WHERE employeeID = " + employeeID + ");";
+					 	"SET stateName = '" + stateName + "'\n" +
+					 	"WHERE employeeID = '" + employeeID + "';";
 		 }
 
 		 
@@ -1018,7 +885,6 @@ public class DBApp {
 			System.out.println("Employee updated successfully");
 		}
 			
-			scan.close();
     }
     
     
@@ -1028,7 +894,7 @@ public class DBApp {
     	 double taxRate;
     	
 		 // Instantiate Scanner
-		 Scanner scan = new Scanner(System.in);
+		 //Scanner scan = new Scanner(System.in);
 		 
 		 System.out.println("Enter state name: ");
 		 stateName = scan.next();
@@ -1036,17 +902,16 @@ public class DBApp {
 		 System.out.println("Enter new tax rate (0.##): ");
 		 taxRate = scan.nextDouble();
 		 
-		 update = "UPDATE State" + "\n" +
+		 update = "UPDATE States" + "\n" +
 				 	"SET stateTaxRate = " + taxRate + "\n" +
-				 	"WHERE stateName = " + stateName + ");";
+				 	"WHERE stateName = '" + stateName + "';";
 		 
 		boolean result = updateSQL(update);
 		
 		if (result) {
 			System.out.println("State Tax Rate updated successfully");
 		}
-		 
-		 scan.close();
+
     }
     
     
@@ -1056,7 +921,7 @@ public class DBApp {
 	   	 double taxRate;
    	
 		 // Instantiate Scanner
-		 Scanner scan = new Scanner(System.in);
+		 //Scanner scan = new Scanner(System.in);
 		 
 		 System.out.println("Enter federal tax bracket: ");
 		 fedBracket = scan.next();
@@ -1066,26 +931,25 @@ public class DBApp {
 		 
 		 update = "UPDATE federalTax" + "\n" +
 				 	"SET fedTaxRate = " + taxRate + "\n" +
-				 	"WHERE federalTaxBracket = " + fedBracket + ");";
+				 	"WHERE federalTaxBracket = '" + fedBracket + "';";
 		 
 		boolean result = updateSQL(update);
 		
 		if (result) {
 			System.out.println("Federal Tax Rate updated successfully");
 		}
-		 
-		 scan.close();
+
     }
     
     
     public static void updateContribution(int selection) {
     	
-    	String employeeID, update, query, ssn="";
+    	String employeeID, update, ssn="";
     	double ss, f1k;
     	boolean success;
     	
 		// Instantiate Scanner
-		Scanner scan = new Scanner(System.in);
+		//Scanner scan = new Scanner(System.in);
     	
 		System.out.println("Please provide the Employee ID: ");
 		employeeID = scan.next();
@@ -1094,40 +958,20 @@ public class DBApp {
     		System.out.println("What is the new contribution amount: ");
     		ss = scan.nextDouble();
     		
-    		// 1. Get Employee employeeSSN
-    		query = "SELECT employeeSSN" + "\n" +
-    				"FROM Employee" + "\n" +
-    				"WHERE employeeID =" + employeeID + ");";
-    		success = querySQL(query);
+    		ssn = stringQuery("employeeSSN", "Employee", "employeeID", employeeID);
     		
-    		if (success) {
-    			
-    			// Reset success variable
-    			success = false;
-    			
-    			try {
-    				while(rset.next()) {
-    					ssn = rset.getString("employeeSSN");
-    				}
-    				
-    				update = "UPDATE otherTaxes" + "\n" +
-    						 "SET ssCompanyPortion = " + ss + "\n" +
-    						"WHERE employeeSSN = " + ssn + ");";
-    				
-    				success = updateSQL(update);
-    				
-    				if (success) {
-    					System.out.println("Social Security Contribution update successfully");
-    				} else {
-    					System.out.println("Error: Please try again later");
-    				}
-  
-    			}
-    			catch(SQLException sqle) {
-    				// Handle exceptions
-    				System.out.println("SQLException: " + sqle);
-    			}
-    		}
+    		update = "UPDATE otherTaxes" + "\n" +
+					 "SET ssCompanyPortion = " + ss + "\n" +
+					"WHERE employeeSSN = '" + ssn + "';";
+			
+			success = updateSQL(update);
+			
+			if (success) {
+				System.out.println("Social Security Contribution update successfully");
+			} else {
+				System.out.println("Error: Please try again later");
+			}
+    		
 		}
 		else if (selection == 2) {			// Benefits -> 401k
     		System.out.println("What is the new contribution amount: ");
@@ -1135,7 +979,7 @@ public class DBApp {
     		
     		update = "UPDATE Benefits" + "\n" +
 					 "SET fourOneKCompanyContr = " + f1k + "\n" +
-					 "WHERE employeeID = " + employeeID + ");";
+					 "WHERE employeeID = '" + employeeID + "');";
     		
     		success = updateSQL(update);
 			
@@ -1166,7 +1010,7 @@ public class DBApp {
 				updateContribution(3);
 			}
 		}
-    	scan.close();
+
     }
     
     
@@ -1177,14 +1021,14 @@ public class DBApp {
     	boolean success;
     	
 		// Instantiate Scanner
-		Scanner scan = new Scanner(System.in);
+		//Scanner scan = new Scanner(System.in);
 		
 		System.out.println("New Individual Contribution Amount: ");
 		ind = scan.nextDouble();
 		
 		update = "UPDATE InsurancePlan" + "\n" +
 				 "SET individualCompanyContr = " + ind + "\n" +
-				 "WHERE employeeID = " + employeeID + ");";
+				 "WHERE employeeID = '" + employeeID + "';";
 		
 		success = updateSQL(update);
 		
@@ -1193,10 +1037,7 @@ public class DBApp {
 		} else {
 			System.out.println("Error: Please try again later");
 		}
-		
-		
-		scan.close();
-    	
+
     }
     
     
@@ -1207,12 +1048,12 @@ public class DBApp {
     	boolean success;
     	
 		// Instantiate Scanner
-		Scanner scan = new Scanner(System.in);
+		//Scanner scan = new Scanner(System.in);
 		fam = scan.nextDouble();
 		
 		update = "UPDATE InsurancePlan" + "\n" +
 				 "SET familyCompanyContr = " + fam + "\n" +
-				 "WHERE employeeID = " + employeeID + ");";
+				 "WHERE employeeID = '" + employeeID + "');";
 		
 		success = updateSQL(update);
 		
@@ -1221,35 +1062,44 @@ public class DBApp {
 		} else {
 			System.out.println("Error: Please try again later");
 		}
-    	
-		scan.close();
+
     }
     
     
     public static void deleteEmployee() {
     	
-    	String employeeID = "";
+    	String employeeID = "", ssn="";
     	String answer;
     	
     	// Instantiate Scanner
-    	Scanner scan = new Scanner(System.in);
+    	//Scanner scan = new Scanner(System.in);
     	
 		System.out.println("Please provide the Employee ID:");
 		
 		// Employee ID
 		System.out.println("Employee ID: ");
 		employeeID = scan.next();
+		ssn = stringQuery("employeeSSN", "Employee", "employeeID", employeeID);
 		 
 		System.out.println("This operation is permanent and cannot be undone. Continue? (Y/N)");
 		answer = scan.next();
 		
-		if (answer == "Y") {
+		if (answer.equals("Y")) {
 			
-			String delete = "DELETE FROM Employee WHERE employeeID = " + employeeID + ");";
+			String delete = "DELETE FROM Employee WHERE employeeID = '" + employeeID + "';";
 			
 			boolean result = updateSQL(delete);
 			
 			if (result) {
+				
+				result = false;
+				
+				delete = "DELETE FROM otherTaxes WHERE employeeSSN = '" + ssn + "';";
+				result = updateSQL(delete);
+				
+				delete = "DELETE FROM userTable WHERE userName = '" + employeeID + "';";
+				result = updateSQL(delete);
+				
 				System.out.println("Employee deleted successfully");
 			}
 			
@@ -1257,9 +1107,7 @@ public class DBApp {
 		else {
 			System.out.println("Exiting operation...");
 		}
-		
-		scan.close();
-		 
+
 		presentMenu(userType);
     }
     
@@ -1272,7 +1120,7 @@ public class DBApp {
     	
     	
 		// Instantiate Scanner
-		Scanner scan = new Scanner(System.in);
+		//Scanner scan = new Scanner(System.in);
 		
 		System.out.println("Please provide the Employee ID:");
 		
@@ -1285,23 +1133,23 @@ public class DBApp {
 		int reportIDInt = random.nextInt(1000);
 		reportID = String.valueOf(reportIDInt);
 		
-		// wages
-		wages = doubleQuery("income", "Paycheck", "employeeID", employeeID);
+		// wages so far
+		//wages = doubleQuery("income", "Paycheck", "employeeID", employeeID);
+		wages = aggQuery("employeeID, sum(income)", "Paycheck", "employeeID", employeeID, "employeeID");
 		
 		//bonus
-		bonus = doubleQuery("bonus", "Employee", "employeeID", employeeID);
+		bonus = doubleQuery("bonus", "Employee", "employeeID", employeeID) * wages;
 		
 		//f1k
-		f1k = doubleQuery("fourOneKCompanyContr", "Benefits", "employeeID", employeeID);
+		f1k = doubleQuery("fourOneKCompanyContr", "Benefits", "employeeID", employeeID) * wages;
 		
 		//ss
-		// 1. Get Employee employeeSSN
 		ssn = stringQuery("employeeSSN", "Employee", "employeeID", employeeID);
-		ss = doubleQuery("ssCompanyPortion", "otherTaxes", "employeeSSN", ssn);
+		ss = doubleQuery("ssCompanyPortion", "otherTaxes", "employeeSSN", ssn) * wages;
 		
 		//ins
-		ind = doubleQuery("individualCompanyContr", "Insurance", "employeeID", employeeID);
-		fam = doubleQuery("familyCompanyContr", "Insurance", "employeeID", employeeID);
+		ind = doubleQuery("individualCompanyContr", "InsurancePlan", "employeeID", employeeID) * wages;
+		fam = doubleQuery("familyCompanyContr", "InsurancePlan", "employeeID", employeeID) * wages;
 		ins = ind + fam;
 
 		// Add ExpenseReport
@@ -1325,8 +1173,6 @@ public class DBApp {
 		System.out.println("Social Security Contribution: " + ss);
 		System.out.println("Insurance Contribution: " + ins);
     	System.out.println();
-    	
-		scan.close();
 		
     	presentMenu(userType);
     }
@@ -1335,11 +1181,11 @@ public class DBApp {
     public static void updateInfo(){
     	
 		// Instantiate Scanner
-		Scanner scan = new Scanner(System.in);
+		//Scanner scan = new Scanner(System.in);
     	
 		// Print out options
 		System.out.println("What would you like to update?" +
-				 				"\n" + "1. Insurance Plan" +								// InsurancePlan
+				 				"\n" + "1. Employee Performance" +							// InsurancePlan
 				 				"\n" + "2. Benefits Package" +								// Benefits
 				 				"\n" + "3. Add Dependent");									// Dependent
 		int selection = scan.nextInt();
@@ -1355,31 +1201,62 @@ public class DBApp {
 			updateInfo();
 		}
 		
-		scan.close();
-		
     	presentMenu(userType);
     	
     }
     
+    public static void updatePerformance() {
+    	
+    	String employeeID="", salaryType="";
+    	boolean isW2 = false;
+    	double multiplier = 0;
+    	
+    	System.out.println("Enter the employeeID: ");
+		employeeID = scan.next();
+		
+		
+		salaryType = stringQuery("salaryType", "Employee", "employeeID", employeeID);
+		if (salaryType.equals("Hourly")) {
+			System.out.println("Error: Only W2 employees receive performance reviews for bonuses.");
+		} else {
+			System.out.println("How would you rate this employee's performance?" +
+	 				"\n" + "1. Super" +							
+	 				"\n" + "2. Good" +	
+	 				"\n" + "3. Just OK" +
+	 				"\n" + "4. Poor");		
+			
+			int selection = scan.nextInt();
+			
+			if (selection == 1) {
+				multiplier = 1.5;
+			} else if (selection == 2) {
+				multiplier = 1.0;
+			} else if (selection == 3) {
+				multiplier = 0.5;
+			} else if (selection == 4) {
+				multiplier = 0;
+			} else {
+				System.out.println("Invalid command. Please try again");
+				updatePerformance();
+			}
+		}
+		
+		// CODE FOR UPDATING BONUS USING MULTIPLIER GOES HERE
+		
+	
+    }
     
-    public static void viewInfo() {
-    	
-    	String employeeID;
-    	
-		// Instantiate Scanner
-		Scanner scan = new Scanner(System.in);
-    	
+    
+    
+    public static void viewInfo(String employeeID) {
 		// Print out options
 		System.out.println("What would you like to view?" +
-				 				"\n" + "1. Employee Profile" +								// Employee
+				 				"\n" + "1. Employee Profile" +						// Employee
 				 				"\n" + "2. Paycheck" +								// Paycheck
 				 				"\n" + "3. W2" +									// W2
 				 				"\n" + "4. Insurance Plan" +						// InsurancePlan
 				 				"\n" + "5. Benefits");								// Benefits
 		int selection = scan.nextInt();
-		
-		System.out.println("Enter the employeeID: ");
-		employeeID = scan.next();
 		
 		if (selection == 1) {
 			viewProfile(employeeID);
@@ -1395,8 +1272,7 @@ public class DBApp {
 			System.out.println("Invalid command. Please try again");
 			updateInfo();
 		}
-		
-		scan.close();
+
 		
     	presentMenu(userType);
     	
@@ -1459,11 +1335,11 @@ public class DBApp {
 		
     	//socialSecurity
 		socialSecurity = doubleQuery("socialSecurity", "Paycheck", "employeeID", employeeID);
-		System.out.println("Social Security: " + socialSecurity);
+		System.out.println("Social Security: " + (socialSecurity));
 		
 		//medicare
 		medicare = doubleQuery("medicare", "Paycheck", "employeeID", employeeID);
-		System.out.println("Social Security: " + socialSecurity);
+		System.out.println("Medicare: " + (medicare));
 		
 		//401K
 		f1k = doubleQuery("fourOneKDeduction", "Paycheck", "employeeID", employeeID);
@@ -1473,7 +1349,7 @@ public class DBApp {
 		ins = doubleQuery("insurancePremium", "Paycheck", "employeeID", employeeID);
 		System.out.println("Insurance Premium: " + ins);
 		
-		double netPay = income - stateTax - fedTax - socialSecurity - medicare - f1k - ins;
+		double netPay = income - stateTax - fedTax - (socialSecurity) - (medicare) - f1k - ins;
 		System.out.println("NET PAY = " + netPay);
 		
 		System.out.println();
@@ -1515,7 +1391,7 @@ public class DBApp {
     	
     	//planID
     	planID = stringQuery("planID", "InsurancePlan", "employeeID", employeeID);
-		System.out.println("W2 ID: " + planID);
+		System.out.println("Health Plan ID: " + planID);
     	
     	//individualEmployeeContr
 		indEmpCont = doubleQuery("individualEmployeeContr", "InsurancePlan", "employeeID", employeeID);
