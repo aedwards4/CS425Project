@@ -1,7 +1,8 @@
 import java.util.*;
+import java.util.Random;
 import java.sql.*;
 
-public class TestApp {
+public class DBApp {
 	
     public static String userType;
     public static String userName;
@@ -70,8 +71,10 @@ public class TestApp {
     
     
     public static boolean validate(String loginName, String password){
-        try( 
-            Connection conn = DriverManager.getConnection("jdbc:postgressql://localhost:5432/postgres", user, sqlPwd);
+        try(
+        		
+        	//Class.forName ("org.postgresql.Driver");
+            Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", user, sqlPwd);
        
             Statement stmt = conn.createStatement();
         ){
@@ -158,6 +161,64 @@ public class TestApp {
 		}
     }
     
+    public static String stringQuery(String select, String from, String where, String equals) {
+    	
+    	String variable = "";
+    	
+    	String query = "SELECT " + select + "\n" +
+				"FROM " + from + "\n" +
+				"WHERE " + where + " = " + equals + ");";
+		boolean success = querySQL(query);
+		
+		if (success) {
+			
+			// Reset success variable
+			success = false;
+			
+			try {
+				while(rset.next()) {
+					variable = rset.getString("insurancePremium");
+				}
+			}
+			catch(SQLException sqle) {
+				// Handle exceptions
+				System.out.println("SQLException: " + sqle);
+			}
+		}
+		
+		return variable;
+		
+    }
+    
+    public static double doubleQuery(String select, String from, String where, String equals) {
+    	
+    	double variable = 0;
+    	
+    	String query = "SELECT " + select + "\n" +
+				"FROM " + from + "\n" +
+				"WHERE " + where + " = " + equals + ");";
+		boolean success = querySQL(query);
+		
+		if (success) {
+			
+			// Reset success variable
+			success = false;
+			
+			try {
+				while(rset.next()) {
+					variable = rset.getDouble("insurancePremium");
+				}
+			}
+			catch(SQLException sqle) {
+				// Handle exceptions
+				System.out.println("SQLException: " + sqle);
+			}
+		}
+		
+		return variable;
+		
+    }
+    
     
     public static void presentMenu(String userType) {
     	
@@ -199,7 +260,7 @@ public class TestApp {
 	 			System.out.println("Invalid command, please try again");
 	 		 }
 	 	 }
-	 	 else
+	 	else if (userType == "Manager")//menu for manager
 	 	 {
 	 		 System.out.println("MENU" + 
 	 				 		"\n" + "1: Update information" + 
@@ -223,7 +284,20 @@ public class TestApp {
 			 {
 				System.out.println("Invalid command, please try again");
 			 }
-	 	 }
+	 	 }else{//menu for employee
+			 
+			 System.out.println("MENU" +
+								"\n" + "1. View Information" +
+								"\n" + "2. Logout");
+			temp = scan.nextInt();
+			if (temp == 1){
+				viewInfo();
+			}else if(temp == 2){
+				logout();
+			}else{
+				System.out.println("Invalid command, please try again");
+			}
+		 }
 	 	 
 	 	 scan.close();
     	
@@ -1192,12 +1266,66 @@ public class TestApp {
     
     public static void runReport() {
     	
+    	String employeeID="", reportID="", ssn="", query="", update="";
+    	double wages=0, bonus=0, f1k=0, ss=0, ins=0, ind=0, fam=0;
+    	boolean success=false;
+    	
+    	
 		// Instantiate Scanner
 		Scanner scan = new Scanner(System.in);
+		
+		System.out.println("Please provide the Employee ID:");
+		
+		// Employee ID
+		System.out.println("Employee ID: ");
+		employeeID = scan.next();
+		
+		// Create reportID
+		Random random = new Random();
+		int reportIDInt = random.nextInt(1000);
+		reportID = String.valueOf(reportIDInt);
+		
+		// wages
+		wages = doubleQuery("income", "Paycheck", "employeeID", employeeID);
+		
+		//bonus
+		bonus = doubleQuery("bonus", "Employee", "employeeID", employeeID);
+		
+		//f1k
+		f1k = doubleQuery("fourOneKCompanyContr", "Benefits", "employeeID", employeeID);
+		
+		//ss
+		// 1. Get Employee employeeSSN
+		ssn = stringQuery("employeeSSN", "Employee", "employeeID", employeeID);
+		ss = doubleQuery("ssCompanyPortion", "otherTaxes", "employeeSSN", ssn);
+		
+		//ins
+		ind = doubleQuery("individualCompanyContr", "Insurance", "employeeID", employeeID);
+		fam = doubleQuery("familyCompanyContr", "Insurance", "employeeID", employeeID);
+		ins = ind + fam;
+
+		// Add ExpenseReport
+		update = "insert into ExpenseReport" + "\n" +
+				"values(" + employeeID + "," + reportID + "," + wages + "," + bonus + "," +
+				f1k + "," + ss + "," + ins + ");";
+
+		success = updateSQL(update);
+		
+		if (success) {
+			success = false;
+			System.out.println("Report Generated:");
+		}
+		
+		// Print out report:
+		System.out.println("Employee ID: " + employeeID);
+		System.out.println("ReportID: " + reportID);
+		System.out.println("Wages: " + wages);
+		System.out.println("Bonus: " + bonus);
+		System.out.println("401K Contribution: " + f1k);
+		System.out.println("Social Security Contribution: " + ss);
+		System.out.println("Insurance Contribution: " + ins);
+    	System.out.println();
     	
-		
-		
-		
 		scan.close();
 		
     	presentMenu(userType);
@@ -1243,14 +1371,14 @@ public class TestApp {
     	
 		// Print out options
 		System.out.println("What would you like to view?" +
-				 				"\n" + "1. Profile" +								// Employee
+				 				"\n" + "1. Employee Profile" +								// Employee
 				 				"\n" + "2. Paycheck" +								// Paycheck
 				 				"\n" + "3. W2" +									// W2
 				 				"\n" + "4. Insurance Plan" +						// InsurancePlan
 				 				"\n" + "5. Benefits");								// Benefits
 		int selection = scan.nextInt();
 		
-		System.out.println("Enter your employeeID: ");
+		System.out.println("Enter the employeeID: ");
 		employeeID = scan.next();
 		
 		if (selection == 1) {
@@ -1277,25 +1405,171 @@ public class TestApp {
     
     public static void viewProfile(String employeeID) {
     	
+    	String first="", last="", jobTitle="", sType="";
+    	double bonus=0;
+    	
+    	//Employee ID
+    	System.out.println("EmployeeID: " + employeeID);
+    	
+    	//First Name
+    	first = stringQuery("firstName", "Employee", "employeeID", employeeID);
+		System.out.println("First Name: " + first);
+    	
+    	//Last Name
+		last = stringQuery("lastName", "Employee", "employeeID", employeeID);
+		System.out.println("Last Name: " + last);
+    	
+    	//Job Title
+		jobTitle = stringQuery("jobTitle", "Employee", "employeeID", employeeID);
+		System.out.println("Job Title: " + jobTitle);
+    	
+    	//Salary Type
+		sType = stringQuery("salaryType", "Employee", "employeeID", employeeID);
+		System.out.println("Salary Type: " + sType);
+    	
+    	//Bonus
+		bonus = doubleQuery("bonus", "Employee", "employeeID", employeeID);
+		System.out.println("Bonus Amount: " + bonus);
+		
+		System.out.println();
+		presentMenu(userType);
     }
     
     
     public static void viewPaycheck(String employeeID) {
     	
+    	String paycheckID="";
+    	double income=0, stateTax=0, fedTax=0, socialSecurity=0, medicare=0, f1k=0, ins=0;
+    	
+    	//PaycheckID
+    	paycheckID = stringQuery("paycheckID", "Paycheck", "employeeID", employeeID);
+		System.out.println("Paycheck ID: " + paycheckID);
+    	
+    	//Income
+		income = doubleQuery("income", "Paycheck", "employeeID", employeeID);
+		System.out.println("Gross Pay: " + income);
+    	
+    	//stateTax
+		stateTax = doubleQuery("stateTax", "Paycheck", "employeeID", employeeID);
+		System.out.println("State Taxes: " + stateTax);
+    	
+    	//fedTax
+		fedTax = doubleQuery("fedTax", "Paycheck", "employeeID", employeeID);
+		System.out.println("Federal Taxes: " + fedTax);
+		
+    	//socialSecurity
+		socialSecurity = doubleQuery("socialSecurity", "Paycheck", "employeeID", employeeID);
+		System.out.println("Social Security: " + socialSecurity);
+		
+		//medicare
+		medicare = doubleQuery("medicare", "Paycheck", "employeeID", employeeID);
+		System.out.println("Social Security: " + socialSecurity);
+		
+		//401K
+		f1k = doubleQuery("fourOneKDeduction", "Paycheck", "employeeID", employeeID);
+		System.out.println("401K Deduction: " + f1k);
+		
+		//insurancePremium
+		ins = doubleQuery("insurancePremium", "Paycheck", "employeeID", employeeID);
+		System.out.println("Insurance Premium: " + ins);
+		
+		double netPay = income - stateTax - fedTax - socialSecurity - medicare - f1k - ins;
+		System.out.println("NET PAY = " + netPay);
+		
+		System.out.println();
+		presentMenu(userType);
+		
     }
     
     
     public static void viewW2(String employeeID) {
     	
+    	String w2ID="";
+    	double yearly=0, ded=0, bonus=0;
+    	
+    	//W2ID
+    	w2ID = stringQuery("w2ID", "W2", "employeeID", employeeID);
+		System.out.println("W2 ID: " + w2ID);
+    	
+    	//yearlyIncome
+		yearly = doubleQuery("yearlyIncome", "W2", "employeeID", employeeID);
+		System.out.println("Year Income: " + yearly);
+    	
+    	//deducions
+    	ded = doubleQuery("deductions", "W2", "employeeID", employeeID);
+    	System.out.println("Deductions: " + ded);
+				
+    	//bonuses
+    	bonus = doubleQuery("bonuses", "W2", "employeeID", employeeID);
+    	System.out.println("Bonuses: " + bonus);
+    	
+    	System.out.println();
+		presentMenu(userType);
     }
     
     
     public static void viewInsurance(String employeeID) {
     	
+    	String planID="";
+    	double indEmpCont=0, indCompCont=0, famIndCont=0, famCompCont=0;
+    	
+    	//planID
+    	planID = stringQuery("planID", "InsurancePlan", "employeeID", employeeID);
+		System.out.println("W2 ID: " + planID);
+    	
+    	//individualEmployeeContr
+		indEmpCont = doubleQuery("individualEmployeeContr", "InsurancePlan", "employeeID", employeeID);
+		System.out.println("Individual Employee Contribution: " + indEmpCont);
+    	
+    	//individualCompanyContr
+		indCompCont = doubleQuery("individualCompanyContr", "InsurancePlan", "employeeID", employeeID);
+		System.out.println("Individual Company Contribution: " + indCompCont);
+		
+    	//familyEmployeeContr
+		famIndCont = doubleQuery("familyEmployeeContr", "InsurancePlan", "employeeID", employeeID);
+		System.out.println("Family Employee Contribution: " + famIndCont);
+		
+    	//familyCompanyContr
+		famCompCont = doubleQuery("familyCompanyContr", "InsurancePlan", "employeeID", employeeID);
+		System.out.println("Family Company Contribution: " + famCompCont);
+    	
+    	System.out.println();
+		presentMenu(userType);
+    	
     }
     
     
     public static void viewBenefits(String employeeID) {
+    	
+    	String accountNum="", healthPlan="", attorneyPlan="", lifeIns="";
+    	double f1kEmp=0, f1kComp=0;
+    	
+    	//planAccountNum
+    	accountNum = stringQuery("planAccountNum", "Benefits", "employeeID", employeeID);
+		System.out.println("Account Number: " + accountNum);
+    	
+    	//healthPlan
+		healthPlan = stringQuery("healthPlan", "Benefits", "employeeID", employeeID);
+		System.out.println("Health Plan: " + healthPlan);
+    	
+    	//fourOneKEmployeeContr
+		f1kEmp = doubleQuery("fourOneKEmployeeContr", "Benefits", "employeeID", employeeID);
+		System.out.println("401K Employee Contribution: " + f1kEmp);
+    	
+    	//fourOneKCompanyContr
+		f1kComp = doubleQuery("fourOneKCompanyContr", "Benefits", "employeeID", employeeID);
+		System.out.println("401K Company Contribution: " + f1kComp);
+    	
+    	//attorneyPlan
+		attorneyPlan = stringQuery("attorneyPlan", "Benefits", "employeeID", employeeID);
+		System.out.println("Attorney Plan: " + attorneyPlan);
+    	
+    	//lifeInsurance
+		lifeIns = stringQuery("lifeInsurance", "Benefits", "employeeID", employeeID);
+		System.out.println("Life Insurance: " + lifeIns);
+    	
+    	System.out.println();
+		presentMenu(userType);
     	
     }
     
