@@ -2,6 +2,7 @@ import java.util.*;
 import java.util.Random;
 
 import java.sql.*;
+import java.text.DecimalFormat;
 
 public class DBApp {
 	
@@ -12,6 +13,7 @@ public class DBApp {
     static boolean loginSuccess;
     static int attempts;
     static boolean success;
+    private static DecimalFormat df2 = new DecimalFormat("#.##");
     
     // Alexis Postgres Info
     public static String user = "postgres";
@@ -44,7 +46,7 @@ public class DBApp {
     }
     
     
-    public static void signin(){
+public static void signin(){
         
         //user log in with password and userName
         System.out.println("------Log In------");
@@ -59,13 +61,17 @@ public class DBApp {
             System.out.println();
             attempts += 1;
             
+            System.out.println("------Log In------");
+            System.out.println("User name:");
+            userName = scan.next();
+            System.out.println("Password:");
+            password = scan.next();
+            attempts +=1;
             if (attempts >= 3) {
-            	System.out.println("Too many unsuccessful attemps. Try again later.");
-            	break;
+                System.out.println("Too many unsuccessful attemps. Try again later.");
+                System.exit(0);
             }
-            else {
-            	signin();
-            }
+           
         }
         
         System.out.println("Logged in successfully!");
@@ -344,20 +350,35 @@ public class DBApp {
 	 	else if (userType.equals("Manager"))//menu for manager
 	 	 {
 	 		 System.out.println("MENU" + 
-	 				 		"\n" + "1: Update information" + 
-	 				 		"\n" + "2: View information" + 
-	 				 		"\n" + "3. Logout");
-	 		 
+						"\n" + "1. View Information" +
+						"\n" + "2. Add Benefits Plan" +
+						"\n" + "3. Add Dependent" +
+						"\n" + "4. Employee Evaluation" +
+						"\n" + "5. Update Home State" +
+						"\n" + "6. Logout");
 	 		temp = scan.nextInt();
-			 if(temp == 1) // Update Information
+			 if(temp == 1) // 
 			 {
-				 updateInfo();
+				 viewInfo(userName);
+				 //updateInfo();
 			 }
-			 else if(temp == 2) // View Information
+			 else if(temp == 2) //
 			 {
-				 //viewInfo();
+				 addBenefits(userName);
 			 }
-			else if(temp == 3) // Exit
+			else if(temp == 3) // 
+			 {
+				addDependent();
+			 }
+			else if(temp == 4) // 
+			 {
+				updatePerformance();
+			 }
+			else if(temp == 5) // 
+			 {
+				updateState();
+			 }
+			else if(temp == 6) // 
 			 {
 				 logout();
 			 }
@@ -370,18 +391,25 @@ public class DBApp {
 			 System.out.println("MENU" +
 								"\n" + "1. View Information" +
 								"\n" + "2. Add Benefits Plan" +
-								"\n" + "3. Logout");
+								"\n" + "3. Add Dependent" +
+								"\n" + "4. Update Home State" +
+								"\n" + "5. Logout");
 			temp = scan.nextInt();
 			if (temp == 1){
 				viewInfo(userName);
 			}else if(temp == 2){
 				addBenefits(userName);
 			}else if(temp == 3){
+				addDependent();
+			}else if(temp == 4){
+				updateState();
+			}else if(temp == 5){
 				logout();
 			}else{
 				System.out.println("Invalid command, please try again");
 			}
 		 }
+	 	 System.out.println();
     	
     }
     
@@ -424,13 +452,21 @@ public class DBApp {
     public static void addEmployee() {
     	
     	int federalTaxBracket, ssn;
-    	String employeeID, firstName, lastName, jobTitle, salaryType, stateName;
+    	String employeeID, firstName, lastName, jobTitle, salaryType, stateName, userType1="";
     	double bonus;
     	
     	// Instantiate Scanner
     	//Scanner scan = new Scanner(System.in);
     	
 		System.out.println("Please provide the following information:");
+		
+		//userType
+		System.out.println("Employee or Manager?: ");
+		userType1 = scan.next();
+		if (userType1.equals("Employee")) {
+			userType1 = "Emp";
+		}
+		//System.out.println(userType1);
 		 
 		// Employee ID
 		System.out.println("Employee ID: ");
@@ -444,9 +480,9 @@ public class DBApp {
 		
 		// Job Title
 		System.out.println("Job Title: ");
+		String x = scan.nextLine();
 		jobTitle = scan.nextLine();
 		
-		String x = scan.nextLine();
 		
 		// Salary Type
 		System.out.println("Salary Type (W2/Hourly): ");
@@ -500,7 +536,7 @@ public class DBApp {
 				result = false;
 				
 				update = "insert into userTable" + "\n" +
-						"values('" + employeeID + "','" + "pwd" + "','" + "Emp" + "');";
+						"values('" + employeeID + "','" + "pwd" + "','" + userType1 + "');";
 				
 				result = updateSQL(update);
 				if (result) {
@@ -563,12 +599,21 @@ public class DBApp {
     public static void addBenefits(String employeeID) {
     	
     	double f1kEmpCont, f1kCompCont;
-    	String planAccNum, healthPlan, attorneyPlan, lifeIns;
+    	String healthPlan, attorneyPlan, lifeIns, depSSN="";
+    	int planAccNum;
     	
-    	// Instantiate Scanner
-    	//Scanner scan = new Scanner(System.in);
+
+    	System.out.println("Who are the Benefits for?" + "\n"
+    						+ "1. Self" + "\n"
+    						+ "2. Dependent");
+    	String temp = scan.next();
     	
 		System.out.println("Please provide the following information:");
+		
+    	if (temp.equals("2")) {
+    		System.out.println("Dependent SSN (no dashes):");
+    		depSSN = scan.next();
+    	}
 		
 		// 401k Employee Contribution
 		System.out.println("401K Contribution: ");
@@ -579,13 +624,15 @@ public class DBApp {
 		} else {
 			f1kCompCont = f1kEmpCont;
 		}
+		//String x = scan.nextLine();
 		
 		// Plan Account Number
 		Random random = new Random();
-		planAccNum = "A" + String.valueOf(random.nextInt(10000));
+		planAccNum = random.nextInt(10000);
 		
 		// Health Plan
 		System.out.println("Health Plan (Y/N): ");
+		String x = scan.nextLine();
 		healthPlan = scan.next();
 		
 		// Attorney Plan
@@ -597,22 +644,33 @@ public class DBApp {
 		lifeIns = scan.next();
 		
 		// Employee ID
-		System.out.println("Employee ID: ");
-		employeeID = scan.next();
+		employeeID = userName;
+		String update = "";
 		
+    	if (temp.equals("1")) {
+    		update = "insert into Benefits" + "\n" +
+					"values('" + planAccNum + "','" + healthPlan + "'," + f1kEmpCont + "," +
+					f1kCompCont + ",'" + attorneyPlan + "','" + lifeIns + "','" + employeeID + "');";
+    	} else {
+    		update = "insert into Benefits" + "\n" +
+					"values('" + planAccNum + "','" + healthPlan + "'," + f1kEmpCont + "," +
+					f1kCompCont + ",'" + attorneyPlan + "','" + lifeIns + "');";
+    	}
 		
-		// SQL CODE
-		String update = "insert into Benefits" + "\n" +
-						"values(" + f1kEmpCont + "," + f1kCompCont + ",'" + planAccNum + "','" +
-						healthPlan + "','" + attorneyPlan + "','" + lifeIns + "','" + employeeID + "');";
 			
 		boolean result = updateSQL(update);
 		
 		if (result) {
+			if (temp.equals("2")) {
+				update = "UPDATE Dependent" + "\n" +
+						"SET planAccountNum = '" + planAccNum + "'\n" +
+						"WHERE dependentSSN = '" + depSSN + "';";
+				updateSQL(update);
+			}
 			System.out.println("Benefit Plan added successfully");
 		}
 
-    	
+    	presentMenu(userType);
     }
     
     
@@ -795,7 +853,7 @@ public class DBApp {
 			 updateEmployee();
 		 }
 		 else if (selection == 2) {			// State
-			 updateState();
+			 updateStateTax();
 		 }
 		 else if (selection == 3) {			// federalTax
 			 updateFederal();
@@ -840,8 +898,8 @@ public class DBApp {
 		 System.out.println("What you like to update?" +
 				 				"\n" + "1. Job Title" +								// jobTitle
 				 				"\n" + "2. Salary Type" +							// salaryType
-				 				"\n" + "3. Bonus" +									// bonus
-				 				"\n" + "4. State Tax Rate");						// stateName
+				 				"\n" + "3. Bonus Base Percentage" +					// bonus
+				 				"\n" + "4. Employee Name");							// first, last
 		 
 		 int selection = scan.nextInt();
 		 if (selection == 1) {				// jobTitle
@@ -861,22 +919,61 @@ public class DBApp {
 					 	"WHERE employeeID = '" + employeeID + "';";
 		 }
 		 else if (selection == 3) {			// bonus
-			 System.out.println("Enter Bonus Amount: $");
-			 int bonus = scan.nextInt();
+			 System.out.println("Enter Bonus Amount (decimal format):");
+			 double bonus = scan.nextDouble();
 			 
 			 update = "UPDATE Employee" + "\n" +
 					 	"SET bonus = " + bonus + "\n" +
 					 	"WHERE employeeID = '" + employeeID + "';";
 		 }
-		 else if (selection == 4) {			// stateName
-			 System.out.println("State Name: ");
-			 String stateName = scan.next();
+		 else if (selection == 4) {		// first/last
 			 
-			 update = "UPDATE Employee" + "\n" +
-					 	"SET stateName = '" + stateName + "'\n" +
-					 	"WHERE employeeID = '" + employeeID + "';";
-		 }
+			 System.out.println("Which would you like to update?" +
+		 				"\n" + "1. First Name" +								
+		 				"\n" + "2. Last Name" +							
+		 				"\n" + "3. Both");			
+			 
+			 selection = scan.nextInt();
+			 if (selection == 1) {
+				 
+				 System.out.println("Enter Employee's First Name: ");
+				 String first = scan.next();
+				 
+				 update = "UPDATE Employee" + "\n" +
+						 	"SET firstName = '" + first + "'\n" +
+						 	"WHERE employeeID = '" + employeeID + "';";
+				 
+			 } else if (selection == 2) {
+				 
+				 System.out.println("Enter Employee's Last Name: ");
+				 String last = scan.next();
+				 
+				 update = "UPDATE Employee" + "\n" +
+						 	"SET lastName = '" + last + "'\n" +
+						 	"WHERE employeeID = '" + employeeID + "';";
+				 
+			 } else if (selection == 3) {
+				 
+				 System.out.println("Enter Employee's First Name: ");
+				 String first = scan.next();
+				 
+				 System.out.println("Enter Employee's Last Name: ");
+				 String last = scan.next();
+				 
+				 update = "UPDATE Employee" + "\n" +
+						 	"SET firstName = '" + first + "', lastname = '" + last + "'\n" +
+						 	"WHERE employeeID = '" + employeeID + "';";
+				 
+			 } else {
+				 System.out.println("Invalid command, Please try again");
+				 updateEmployee();
+			 }
 
+		 }
+		 else {
+			 System.out.println("Invalid command, Please try again");
+			 updateEmployee();
+		 }
 		 
 		 // SQL CODE HERE
 		boolean result = updateSQL(update);
@@ -888,7 +985,7 @@ public class DBApp {
     }
     
     
-    public static void updateState() {
+    public static void updateStateTax() {
     	
     	 String stateName, update;
     	 double taxRate;
@@ -1185,16 +1282,14 @@ public class DBApp {
     	
 		// Print out options
 		System.out.println("What would you like to update?" +
-				 				"\n" + "1. Employee Performance" +							// InsurancePlan
-				 				"\n" + "2. Benefits Package" +								// Benefits
-				 				"\n" + "3. Add Dependent");									// Dependent
+				 				"\n" + "1. Benefits Package" +							// InsurancePlan
+				 				"\n" + "1. Name" +										// InsurancePlan
+				 				"\n" + "2. State");								// Benefits
 		int selection = scan.nextInt();
 		
 		if (selection == 1) {
 			
 		} else if (selection == 2) {
-			
-		} else if (selection == 3) {
 			
 		} else {
 			System.out.println("Invalid command. Please try again");
@@ -1205,13 +1300,52 @@ public class DBApp {
     	
     }
     
+    public static void getEmployeeList() {
+    	System.out.println("Eligible Employees: ");
+    	
+    	String query = "SELECT employeeID, firstName" + "\n"
+    			+ "FROM (SELECT userName AS employeeID FROM userTable" + "\n"
+    			+ "WHERE userType='Emp') AS foo NATURAL JOIN Employee;";
+    	
+    	try {
+
+			// Create connection
+			Connection conn = DriverManager.getConnection("jdbc:postgresql://localhost:5432/postgres", user, sqlPwd);
+			
+			// Create statement
+			Statement stmt = conn.createStatement();
+			
+			// Execute statement
+			rset = stmt.executeQuery(query);
+			
+			while(rset.next()) {
+				System.out.println(rset.getString("employeeID"));
+			}
+			
+			// Close connections
+			stmt.close();
+			conn.close();
+			
+			success = true;
+		
+		}
+		catch(SQLException sqle) {
+			// Handle exceptions
+			System.out.println("SQLException: " + sqle);
+		}
+
+    }
+    
+    
     public static void updatePerformance() {
+    	
+    	getEmployeeList();
     	
     	String employeeID="", salaryType="";
     	boolean isW2 = false;
     	double multiplier = 0;
     	
-    	System.out.println("Enter the employeeID: ");
+    	System.out.println("Which employee would you like to evaluate?: ");
 		employeeID = scan.next();
 		
 		
@@ -1241,9 +1375,21 @@ public class DBApp {
 			}
 		}
 		
-		// CODE FOR UPDATING BONUS USING MULTIPLIER GOES HERE
+		double bonus = doubleQuery("bonus", "Employee", "employeeID", employeeID);
+		double newBonus = bonus*multiplier;
 		
-	
+		
+		// CODE FOR UPDATING BONUS USING MULTIPLIER GOES HERE
+        String query = "UPDATE Employee" + "\n" +
+                "SET bonus = " + newBonus + "\n" +
+                "WHERE employeeID = '" + employeeID + "';";
+		boolean result = updateSQL(query);
+		
+		if (result) {
+		System.out.println("Employee bonus updated successfully with evaluation multiplier");
+		}
+		
+		presentMenu(userType);
     }
     
     
@@ -1270,11 +1416,8 @@ public class DBApp {
 			viewBenefits(employeeID);
 		} else {
 			System.out.println("Invalid command. Please try again");
-			updateInfo();
+			viewInfo(employeeID);
 		}
-
-		
-    	presentMenu(userType);
     	
     }
     
@@ -1316,41 +1459,48 @@ public class DBApp {
     	
     	String paycheckID="";
     	double income=0, stateTax=0, fedTax=0, socialSecurity=0, medicare=0, f1k=0, ins=0;
+ 
+    	//System.out.println(fromStmt);
+    	
+    	System.out.println("Paycheck Date (Formatted as 01/01/1999: ");
+    	paycheckID = scan.next();
+    	
+    	String fromStmt = "(SELECT * FROM Paycheck WHERE paycheckID = '" + paycheckID + "') AS foo";
     	
     	//PaycheckID
-    	paycheckID = stringQuery("paycheckID", "Paycheck", "employeeID", employeeID);
+    	paycheckID = stringQuery("paycheckID", fromStmt, "employeeID", employeeID);
 		System.out.println("Paycheck ID: " + paycheckID);
     	
     	//Income
-		income = doubleQuery("income", "Paycheck", "employeeID", employeeID);
+		income = doubleQuery("income", fromStmt, "employeeID", employeeID);
 		System.out.println("Gross Pay: " + income);
     	
     	//stateTax
-		stateTax = doubleQuery("stateTax", "Paycheck", "employeeID", employeeID);
+		stateTax = doubleQuery("stateTax", fromStmt, "employeeID", employeeID);
 		System.out.println("State Taxes: " + stateTax);
     	
     	//fedTax
-		fedTax = doubleQuery("fedTax", "Paycheck", "employeeID", employeeID);
+		fedTax = doubleQuery("fedTax", fromStmt, "employeeID", employeeID);
 		System.out.println("Federal Taxes: " + fedTax);
 		
     	//socialSecurity
-		socialSecurity = doubleQuery("socialSecurity", "Paycheck", "employeeID", employeeID);
+		socialSecurity = doubleQuery("socialSecurity", fromStmt, "employeeID", employeeID);
 		System.out.println("Social Security: " + (socialSecurity));
 		
 		//medicare
-		medicare = doubleQuery("medicare", "Paycheck", "employeeID", employeeID);
+		medicare = doubleQuery("medicare", fromStmt, "employeeID", employeeID);
 		System.out.println("Medicare: " + (medicare));
 		
 		//401K
-		f1k = doubleQuery("fourOneKDeduction", "Paycheck", "employeeID", employeeID);
+		f1k = doubleQuery("fourOneKDeduction", fromStmt, "employeeID", employeeID);
 		System.out.println("401K Deduction: " + f1k);
 		
 		//insurancePremium
-		ins = doubleQuery("insurancePremium", "Paycheck", "employeeID", employeeID);
+		ins = doubleQuery("insurancePremium", fromStmt, "employeeID", employeeID);
 		System.out.println("Insurance Premium: " + ins);
 		
 		double netPay = income - stateTax - fedTax - (socialSecurity) - (medicare) - f1k - ins;
-		System.out.println("NET PAY = " + netPay);
+		System.out.println("NET PAY = " + df2.format(netPay));
 		
 		System.out.println();
 		presentMenu(userType);
@@ -1363,20 +1513,25 @@ public class DBApp {
     	String w2ID="";
     	double yearly=0, ded=0, bonus=0;
     	
+    	System.out.println("Enter W2 Year: ");
+    	String year = scan.next();
+    	
+    	String fromStmt = "(SELECT * FROM W2 WHERE w2ID = '" + year + "') AS foo";
+    	
     	//W2ID
-    	w2ID = stringQuery("w2ID", "W2", "employeeID", employeeID);
+    	w2ID = stringQuery("w2ID", fromStmt, "employeeID", employeeID);
 		System.out.println("W2 ID: " + w2ID);
     	
     	//yearlyIncome
-		yearly = doubleQuery("yearlyIncome", "W2", "employeeID", employeeID);
+		yearly = doubleQuery("yearlyIncome", fromStmt, "employeeID", employeeID);
 		System.out.println("Year Income: " + yearly);
     	
     	//deducions
-    	ded = doubleQuery("deductions", "W2", "employeeID", employeeID);
+    	ded = doubleQuery("deductions", fromStmt, "employeeID", employeeID);
     	System.out.println("Deductions: " + ded);
 				
     	//bonuses
-    	bonus = doubleQuery("bonuses", "W2", "employeeID", employeeID);
+    	bonus = doubleQuery("bonuses", fromStmt, "employeeID", employeeID);
     	System.out.println("Bonuses: " + bonus);
     	
     	System.out.println();
@@ -1448,6 +1603,75 @@ public class DBApp {
 		presentMenu(userType);
     	
     }
+    
+    
+    public static void updateState() {
+
+		 System.out.println("State Name: ");
+		 String stateName = scan.next();
+		 
+		 String update = "UPDATE Employee" + "\n" +
+					 	"SET stateName = '" + stateName + "'\n" +
+					 	"WHERE employeeID = '" + userName + "';";
+		 
+		 boolean result = updateSQL(update);
+			
+			if (result) {
+				System.out.println("Employee updated successfully");
+			}
+		 presentMenu(userType);
+    }
+    
+    
+    public static void addDependent(){
+      	 String employeeID, planAccNum, dependentSSN, firstName, lastName, relationToEmployee;
+      	 boolean add = true;
+      	 
+      	 while(add == true){
+	      	 System.out.println("Please provide the following information:");
+	      	 
+	      	 // Employee ID
+	      	 employeeID = userName;
+	      	 
+	      	 // On creating Dependent, they won't have a plan account number....
+//	      	 System.out.println("Plan Account Number: ");
+//	      	 planAccNum = scan.next();
+	      	 
+	      	 System.out.println("Dependent's SSN: ");
+	      	 dependentSSN = scan.next();
+	      	 
+	      	 System.out.println("Dependent's First Name: ");
+	      	 firstName = scan.next();
+	      	 
+	      	 System.out.println("Dependent's Last Name: ");
+	      	 lastName = scan.next();
+	      	 
+	      	 System.out.println("Relation to the employee: ");
+	      	 relationToEmployee = scan.next();
+	      	 
+	      	 boolean result = false;
+	      		 
+	      	 String update = "insert into Dependent" + "\n" +
+	      			 "values('" + employeeID + "','" + dependentSSN + "','"+ firstName + "','" + lastName + "','" +
+	      			relationToEmployee + "');";
+	      		 
+	      	 result = updateSQL(update);
+	      	 
+	      	 if (result) {
+	      		 System.out.println("Dependent added successfully");
+	      	 }
+	      	 
+	      	 System.out.println("Would you like to add another dependent?(Y/N): ");
+	      	 String temp = scan.next();
+	      	 
+	      	 if(temp.equals("N")){
+	      		 add = false;
+	      	 }
+      	 }
+      	 
+      	presentMenu(userType);
+   	}
+
     
     
     public static void logout() {
